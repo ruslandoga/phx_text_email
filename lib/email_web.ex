@@ -107,6 +107,16 @@ defmodule EmailWeb do
     end
   end
 
+  def view do
+    quote do
+      use Phoenix.View,
+        root: "lib/email_web/templates",
+        namespace: PlausibleWeb
+
+      use Phoenix.Component
+    end
+  end
+
   @doc """
   When used, dispatch to the appropriate controller/live_view/etc.
   """

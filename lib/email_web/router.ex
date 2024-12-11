@@ -26,12 +26,12 @@ defmodule EmailWeb.Router do
   # end
 
   # Enable Swoosh mailbox preview in development
-  if Application.compile_env(:email, :dev_routes) do
+  # if Application.compile_env(:email, :dev_routes) do
 
-    scope "/dev" do
-      pipe_through :browser
+  #   scope "/dev" do
+  #     pipe_through :browser
 
-      forward "/mailbox", Plug.Swoosh.MailboxPreview
-    end
-  end
+  #     forward "/mailbox", Plug.Swoosh.MailboxPreview
+  #   end
+  # end
 end
