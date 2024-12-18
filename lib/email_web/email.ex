@@ -473,56 +473,51 @@ defmodule EmailWeb.Email do
   end
 
   def textify(html) do
-    tree = Floki.parse_fragment!(html)
-    {tree, _trim?} = traverse_and_textify(tree, _trim? = true)
-    Floki.text(tree)
+    Floki.parse_fragment!(html)
+    |> traverse_and_textify()
+    |> Floki.text()
+    |> collapse_whitespace()
   end
 
-  defp traverse_and_textify([head | tail], trim?) do
-    {head, trim?} = traverse_and_textify(head, trim?)
-    {tail, trim?} = traverse_and_textify(tail, trim?)
-    {[head | tail], trim?}
+  defp traverse_and_textify([head | tail]) do
+    [traverse_and_textify(head) | traverse_and_textify(tail)]
   end
 
-  defp traverse_and_textify(text, trim?) when is_binary(text) do
-    text = collapse_whitespace(text, trim?)
-    {text, false}
+  defp traverse_and_textify(text) when is_binary(text) do
+    String.replace(text, "\n", "\s")
   end
 
-  defp traverse_and_textify({"a", attrs, children}, _trim?) do
-    # assumes all a tags have href attribute
+  defp traverse_and_textify({"a", attrs, children}) do
+    # assumes all anchor tags have href attribute
     {"href", href} = List.keyfind!(attrs, "href", 0)
-    # TODO collapse too?
     text = Floki.text(children)
+    text = String.replace(text, "\n", "\s")
 
-    text =
-      if text == href do
-        # avoids rendering "http://localhost:8000 (http://localhost:8000)" in base_email footer
-        text
-      else
-        IO.iodata_to_binary([text, " (", href, ?)])
-      end
-
-    {text, false}
+    if text == href do
+      # avoids rendering "http://localhost:8000 (http://localhost:8000)" in base_email footer
+      text
+    else
+      IO.iodata_to_binary([text, " (", href, ?)])
+    end
   end
 
-  defp traverse_and_textify({tag, attrs, children}, trim?) do
-    {children, trim?} = traverse_and_textify(children, trim?)
-    trim? = tag == "br" or trim?
-    {{tag, attrs, children}, trim?}
+  defp traverse_and_textify(other), do: other
+
+  defp collapse_whitespace(<<?\s, ?\s, rest::bytes>>) do
+    collapse_whitespace(<<?\s, rest::bytes>>)
   end
 
-  defp traverse_and_textify([] = empty, trim?), do: {empty, trim?}
-  defp traverse_and_textify(other, trim?), do: {other, trim?}
-
-  defp collapse_whitespace(text, trim?) do
-    text = if trim?, do: String.trim_leading(text), else: text
-    parts = String.split(text, ["\s", "\n", "\t"])
-    parts = collapse_empty(parts)
-    Enum.join(parts, " ")
+  defp collapse_whitespace(<<?\s, ?\n, rest::bytes>>) do
+    collapse_whitespace(<<?\n, rest::bytes>>)
   end
 
-  defp collapse_empty(["" | ["" | _] = tail]), do: collapse_empty(tail)
-  defp collapse_empty([head | tail]), do: [head | collapse_empty(tail)]
-  defp collapse_empty([] = empty), do: empty
+  defp collapse_whitespace(<<?\n, ?\s, rest::bytes>>) do
+    collapse_whitespace(<<?\n, rest::bytes>>)
+  end
+
+  defp collapse_whitespace(<<c::1-bytes, rest::bytes>>) do
+    c <> collapse_whitespace(rest)
+  end
+
+  defp collapse_whitespace(<<>>), do: <<>>
 end

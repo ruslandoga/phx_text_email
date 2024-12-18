@@ -673,4 +673,10 @@ defmodule EmailWeb.CoreComponents do
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
   end
+
+  def styled_link(assigns) do
+    ~H"""
+    <a href={@href} style="color:red;">{render_slot(@inner_block)}</a>
+    """
+  end
 end
